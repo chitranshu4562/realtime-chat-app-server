@@ -1,13 +1,32 @@
 import Conversation from "../models/conversation.js";
+import Message from "../models/message.js";
 import Group from "../models/group.js";
 import User from "../models/user.js";
-import Message from "../models/message.js";
 
 export const createConversation = async (req, res, next) => {
     try {
-        const {isGroup, participants} = req.body;
+        const {isGroup, chatEntityId} = req.body;
+        const currentUser = req.currentUser;
+
+        const chatEntity = JSON.parse(isGroup) ? await Group.findById(chatEntityId) : await User.findById(chatEntityId);
+        if (!chatEntity) {
+            throw new Error('Chat entity does not exist');
+        }
+
+        const participants = [];
+        participants.push(currentUser._id.toString());
+        if (JSON.parse(isGroup)) {
+            for (const user of chatEntity.participants) {
+                if (user.toString() !== currentUser._id.toString()) {
+                    participants.push(user.toString());
+                }
+            }
+        } else {
+            participants.push(chatEntity._id.toString());
+        }
+
         let conversation;
-        if (isGroup) {
+        if (JSON.parse(isGroup)) {
             conversation = await Conversation.findOne({
                 isGroup: true,
                 participants: {
@@ -41,26 +60,24 @@ export const createConversation = async (req, res, next) => {
 
 export const pushMessageToConversation = async (messageData) => {
     try {
-        const {message, conversationId} = messageData;
-        const conversation = await Conversation.findById(conversationId);
-        if (!conversation) {
-            throw new Error('Conversation not found')
+        const {message, senderId, conversationId} = messageData;
+        if (!message) {
+            throw new Error('Message body can not be empty');
+        }
+        if (!senderId) {
+            throw new Error('Sender Id must be present');
+        }
+        if (!conversationId) {
+            throw new Error('Conversation Id must be present');
         }
 
-        const createdMessage = await Message.create({
+        const messageData = await Message.create({
             content: message,
-            conversation: conversation,
-            sender: conversation.sender
-        })
+            sender: senderId,
+            conversation: conversationId
+        });
 
-        conversation.messages.push(createdMessage._id);
-        const result = await conversation.save();
-        return {
-            message: message,
-            sender: result.sender,
-            recipients: result.recipients,
-            conversationId: result._id
-        }
+        return messageData;
     } catch (error) {
         throw new Error(error);
     }
@@ -77,10 +94,12 @@ export const getConversation = async (req, res, next) => {
         if (!isExist) {
             throw new Error('No conversation found')
         }
-        const chats = await Conversation.findById(conversationId).populate('messages').select('_id sender');
+        const messages = await Message.find({
+            conversation: conversationId
+        })
         res.status(200).json({
             message: 'Chats retrieved successfully',
-            chat: chats || []
+            chats: messages
         })
     } catch (error) {
         next(error);
