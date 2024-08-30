@@ -54,7 +54,9 @@ export const getUsers = async (req, res, next) => {
     try {
         const { searchTerm, userId } = req.query;
         // query initialization
-        let query = User.find();
+        let query = User.find({
+            _id: { $ne: req.currentUser._id }
+        });
 
         // apply condition for id column
         if (userId) {

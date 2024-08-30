@@ -62,7 +62,8 @@ export const createGroup = async (req, res, next) => {
 export const getGroups = async (req, res, next) => {
     try {
         const { searchTerm, groupId } = req.query;
-        let query = Group.find();
+        const participant = req.currentUser._id;
+        let query = Group.find({participants: {"$in": [participant]}});
 
         if (groupId) {
             query = query.where('_id').equals(groupId);
