@@ -8,9 +8,14 @@ export const userSignUp = async (req, res, next) => {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             errors.status = 400;
-            throw errors.array();
+            throw errors.array()[0].msg;
         }
         const { name, email, password } = req.body;
+
+        const existingUser = await User.exists({ email: email });
+        if (existingUser) {
+            throw new Error('User is already exists');
+        }
 
         const user = new User({
             name: name,
@@ -52,7 +57,8 @@ export const userLogin = async (req, res, next) => {
             expirationTime: process.env.EXPIRATION_TIME,
             user: {
                 name: user.name,
-                id: user._id
+                id: user._id,
+                avatar: user.avatar || ''
             }
         })
 

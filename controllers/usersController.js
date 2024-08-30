@@ -38,3 +38,51 @@ export const uploadUserAvatar = async (req, res, next) => {
         next(error);
     }
 }
+
+export const fetchUserProfile = async (req, res, next) => {
+    try {
+        res.status(200).json({
+            message: 'Data retrieved successfully',
+            user: req.currentUser
+        })
+    } catch (error) {
+        next(error);
+    }
+}
+
+export const getUsers = async (req, res, next) => {
+    try {
+        const { searchTerm, userId } = req.query;
+        // query initialization
+        let query = User.find();
+
+        // apply condition for id column
+        if (userId) {
+            query = query.where('_id').equals(userId);
+        }
+        // apply condition for name column with regex
+        if (searchTerm) {
+            const regex = new RegExp(searchTerm, 'i');
+            query = query.where('name').regex(regex);
+        }
+
+        // apply ascending sorting
+        query = query.sort({ name: 1 });
+
+        // apply case-insensitivity on sorting
+        query = query.collation({ locale: 'en', strength: 2 });
+
+        // add select statement
+        query = query.select('name createdAt');
+
+        // execute query
+        const users = await query.exec();
+        res.status(200).json({
+            message: 'Data retrieved successfully.',
+            data: users
+        })
+
+    } catch (error) {
+        next(error);
+    }
+}

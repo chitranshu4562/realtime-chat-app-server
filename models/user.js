@@ -23,7 +23,13 @@ const userSchema = new Schema({
     },
     avatar: {
         type: String
-    }
+    },
+    groups: [
+        {
+            type: Schema.Types.ObjectId,
+            ref: 'Group'
+        }
+    ]
 }, { timestamps: true });
 
 // Pre-save middleware to hash the password if it has been modified
